@@ -27,6 +27,11 @@ class Management:
         self.password = cr.password
         self.database = cr.database
 
+        self.initial()
+
+
+    def initial(self) :
+        
         # Left Frame
         self.frame_1 = Frame(self.window, bg=self.color_1)
         self.frame_1.place(x=0, y=0, width=940, height=100)
