@@ -4,6 +4,8 @@ from tkinter import messagebox
 import pymysql
 import color as cs
 import database as cr
+from datetime import datetime
+from tkinter import ttk 
 
 class Management:
     def __init__(self, root):
@@ -110,10 +112,29 @@ class Management:
         for food_name,price in menu_items:
             if food_name in order_details:
                 total_value+=price * order_details[food_name]
+
+        for name in order_details:
+            connection = pymysql.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                database=self.database
+            )
         
-        curs.execute('insert into food_order (total_value) values (%s)',(total_value))
-        connection.commit()
-        connection.close()
+            curs = connection.cursor()
+            curs.execute('select food_id,price from menu where food_name = (%s)',(name))
+            item_details = curs.fetchone()
+            print(item_details)
+            curs.execute('insert into food_orders (food_id,quantity,food_price,total_value,date) values (%s,%s,%s,%s,%s)',
+                         (item_details[0],
+                          order_details[name],
+                          item_details[1],
+                          (order_details[name]*item_details[1]),
+                          datetime.now().date()
+                          ))
+            connection.commit()
+            connection.close()
+
         self.reset_fields()
 
 
@@ -135,10 +156,49 @@ class Management:
         self.window.destroy()
 
     def Menu(self):
-        pass
+        self.ClearScreen()
+        # Create a Treeview to display the menu
+        columns = ("food_id", "food_name", "quantity", "price")
+        self.tree = ttk.Treeview(self.frame_2, columns=columns, show="headings")
+        
+        # Define the column headings
+        self.tree.heading("food_id", text="Food ID")
+        self.tree.heading("food_name", text="Food Name")
+        self.tree.heading("quantity", text="Quantity")
+        self.tree.heading("price", text="Price (rs)")
+
+        # Set column widths
+        self.tree.column("food_id", width=100)
+        self.tree.column("food_name", width=200)
+        self.tree.column("quantity", width=100)
+        self.tree.column("price", width=100)
+
+        self.tree.pack(pady=20)  # Place the Treeview in the frame
+
+        try:
+            connection = pymysql.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                database=self.database
+            )
+            curs = connection.cursor()
+            curs.execute("SELECT food_id, food_name, quantity, price FROM menu")
+            menu_items = curs.fetchall()
+
+            # Insert data into the Treeview
+            for item in menu_items:
+                self.tree.insert("", "end", values=item)
+
+        except pymysql.MySQLError as e:
+            messagebox.showerror("Database Error", str(e))
+        finally:
+            curs.close()
+            connection.close()
 
     def reset_fields(self):
-        self.quantity_entry.delete(0, END)
+        for entry in self.quantity_entries.values():
+            entry.delete(0, END)
 
 # The main function
 if __name__ == "__main__":
